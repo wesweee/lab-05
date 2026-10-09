@@ -11,16 +11,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -31,12 +34,14 @@ import com.example.listycity.ui.theme.ListyCityTheme
 fun CityListScreen(
     cities: List<City>,
     onAddCity: (City) -> Unit,
+    onDeleteCity: (City) -> Unit,
     onUpdateCity: (City, City) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var newCityName by remember { mutableStateOf("") }
     var newProvinceName by remember { mutableStateOf("") }
     var showAddCityFields by remember { mutableStateOf(false) }
+    var cityToDelete by remember { mutableStateOf<City?>(null) }
     var selectedCity by remember { mutableStateOf<City?>(null) }
     var editedCityName by remember { mutableStateOf("") }
     var editedProvinceName by remember { mutableStateOf("") }
@@ -108,7 +113,7 @@ fun CityListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp)
             ) {
                 OutlinedTextField(
                     value = editedCityName,
@@ -129,7 +134,7 @@ fun CityListScreen(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Button(
-                    modifier = Modifier.padding(vertical = 12.dp),
+                    modifier = Modifier.padding(top = 12.dp),
                     onClick = {
                         val cityToUpdate = selectedCity
                         if (
@@ -154,24 +159,63 @@ fun CityListScreen(
                     Text("UPDATE CITY")
                 }
             }
+            Button( // Show up underneath update city
+                modifier = Modifier
+                    .align(Alignment.End) // right side
+                    .padding(end = 16.dp, bottom = 16.dp),
+                onClick = {
+                    cityToDelete = selectedCity
+                }
+            ) {
+                Text("DELETE CITY")
+            }
         }
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
             itemsIndexed(cities) { index, city ->
                 CityRow(
                     city = city,
                     onClick = {
-                        showAddCityFields = false
-                        newCityName = ""
-                        newProvinceName = ""
-                        selectedCity = city
-                        editedCityName = city.name
-                        editedProvinceName = city.province
+                            showAddCityFields = false
+                            newCityName = ""
+                            newProvinceName = ""
+                            selectedCity = city
+                            editedCityName = city.name
+                            editedProvinceName = city.province
                     }
                 )
                 if (index < cities.lastIndex) {
                     HorizontalDivider()
                 }
             }
+        }
+
+        val pendingCity = cityToDelete // city selected to be deleted - waiting for confirmation
+
+        if (pendingCity != null) {
+            AlertDialog( // pop up alerting user for confirmation on whether to delete selected city
+                onDismissRequest = { cityToDelete = null }, // if don't press button and tap outside pop up, treat as cancel
+                title = { Text("Delete City?") },
+                text = { Text("Delete ${pendingCity.name}, ${pendingCity.province}?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDeleteCity(pendingCity)
+                            cityToDelete = null
+                            selectedCity = null
+                        }
+                    ) {
+                        Text("DELETE")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { cityToDelete = null }
+                    ) {
+                        Text("CANCEL")
+                    }
+                }
+            )
         }
     }
 }
@@ -213,6 +257,7 @@ fun CityListScreenPreview() {
                 City("Calgary", "AB")
             ),
             onAddCity = {},
+            onDeleteCity = {},
             onUpdateCity = { _, _ -> }
         )
     }
